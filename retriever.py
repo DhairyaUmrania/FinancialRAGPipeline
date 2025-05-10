@@ -1,0 +1,107 @@
+# retriever.py
+
+import os
+from typing import List
+
+from pinecone import Pinecone, ServerlessSpec
+from langchain.schema import Document
+from langchain.embeddings import HuggingFaceEmbeddings
+from langchain.retrievers import BM25Retriever
+from langchain_pinecone import PineconeVectorStore
+
+# Configuration (or import from config.py)
+PINECONE_API_KEY       = os.environ["PINECONE_API_KEY"]
+PINECONE_ENVIRONMENT   = os.environ["PINECONE_ENVIRONMENT"]
+PINECONE_INDEX_NAME    = os.environ.get("PINECONE_INDEX_NAME", "my-index")
+EMBEDDING_MODEL_NAME   = os.environ.get("EMBEDDING_MODEL_NAME", "sentence-transformers/all-MiniLM-L6-v2")
+DEVICE                 = os.environ.get("DEVICE", "cpu")
+TOP_K                  = int(os.environ.get("TOP_K", 4))
+
+
+class Retriever:
+    def __init__(self, documents: List[Document] = None):
+        # 1) embeddings model
+        self.embeddings = HuggingFaceEmbeddings(
+            model_name=EMBEDDING_MODEL_NAME,
+            model_kwargs={"device": DEVICE}
+        )
+
+        # 2) optional BM25
+        self.bm25_retriever = None
+        if documents:
+            self.bm25_retriever = BM25Retriever.from_documents(documents)
+            self.bm25_retriever.k = TOP_K
+            print(f"✅ BM25 initialized on {len(documents)} docs")
+
+        # 3) pinecone client/wrapper
+        self.pinecone = Pinecone(api_key=PINECONE_API_KEY, environment=PINECONE_ENVIRONMENT)
+
+        # 4) check or create index
+        needs_ingest = False
+        if not self.pinecone.has_index(PINECONE_INDEX_NAME):
+            print(f"ℹ️  Index '{PINECONE_INDEX_NAME}' not found → creating")
+            dim = self.embeddings.client.get_sentence_embedding_dimension()
+            self.pinecone.create_index(
+                name=PINECONE_INDEX_NAME,
+                dimension=dim,
+                metric="cosine",
+                spec=ServerlessSpec(cloud="aws", region="us-east-1")
+            )
+            needs_ingest = True
+        else:
+            # exists: check if empty
+            idx = self.pinecone.Index(PINECONE_INDEX_NAME)
+            stats = idx.describe_index_stats()
+            total = sum(ns["vector_count"] for ns in stats["namespaces"].values())
+            if total == 0:
+                print(f"ℹ️  Index '{PINECONE_INDEX_NAME}' is empty → will ingest")
+                needs_ingest = True
+            else:
+                print(f"✅ Connected to non-empty index '{PINECONE_INDEX_NAME}' ({total} vectors)")
+
+        # 5) connect vector store
+        idx = self.pinecone.Index(PINECONE_INDEX_NAME)
+        self.vector_store = PineconeVectorStore(index=idx, embedding=self.embeddings)
+
+        # 6) ingest if needed
+        if needs_ingest:
+            if not documents:
+                raise ValueError(
+                    f"Pinecone index '{PINECONE_INDEX_NAME}' is empty and no documents were provided for ingestion"
+                )
+
+            batch_size = 32  # adjust up/down based on average document size
+            for i in range(0, len(documents), batch_size):
+                batch = documents[i : i + batch_size]
+                self.vector_store.add_documents(batch)
+            print(f"🚀 Ingested {len(documents)} documents into Pinecone")
+
+    def get_retriever(self, method: str):
+        method = method.lower()
+        if method == "bm25":
+            if not self.bm25_retriever:
+                raise ValueError("BM25 not initialized (pass documents at init).")
+            return self.bm25_retriever
+        if method == "vector":
+            return self.vector_store.as_retriever(search_kwargs={"k": TOP_K})
+        raise ValueError("Unknown method; choose 'bm25' or 'vector'")
+
+    def retrieve(self, query: str, method: str = "vector") -> List[Document]:
+        retr = self.get_retriever(method)
+        return retr.get_relevant_documents(query)
+
+
+# if __name__ == "__main__":
+#     # from ingestion import ingest_documents
+
+#     print("▶️  First-time ingestion…")
+#     docs = ingest_documents()
+#     retr = Retriever(documents=docs)
+
+#     q = "summarise the lending activities of The First of Long Island Corporation?"
+#     for m in ("bm25", "vector"):
+#         print(f"\n--- {m.upper()} results ---")
+#         hits = retr.retrieve(q, method=m)
+#         # for i, d in enumerate(hits, 1):
+#         #     print(f"{i}. {d.page_content[:]}")
+#         print(hits)
