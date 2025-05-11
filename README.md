@@ -59,7 +59,7 @@ The system follows a modular architecture with the following flow:
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/username/financial-rag-system.git
+git clone https://github.com/DhairyaUmrania/FinancialRAGPipeline/.git
 cd financial-rag-system
 ```
 
