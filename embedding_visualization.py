@@ -1,3 +1,5 @@
+##This code is the intellectual property of Dhairya Umrania, Naman Deep and Devaansh Kataria.
+
 import torch
 import numpy as np
 import matplotlib.pyplot as plt
@@ -9,13 +11,11 @@ import os
 from typing import List, Dict, Any, Tuple
 from langchain.schema import Document
 
-# Import your components
 load_dotenv()
 from ingestion import ingest_documents
 from retriever import Retriever
 from hybrid_retriever import HybridReranker
 
-# Configuration
 DEVICE = os.getenv('DEVICE', 'cuda' if torch.cuda.is_available() else 'cpu')
 TOP_K = int(os.getenv('TOP_K', '5'))
 FUSION_K = int(os.getenv('FUSION_K', '10'))
@@ -40,19 +40,14 @@ def normalize_embeddings(embeddings: List[np.ndarray]) -> List[np.ndarray]:
 
 def get_document_embeddings(retriever, query: str, method: str, k: int = TOP_K) -> Tuple[List[Document], List[np.ndarray]]:
     """Get documents and their embeddings for a given query and retrieval method."""
-    # Get relevant documents
     docs = retriever.retrieve(query, method=method)[:k]
     
-    # Get embeddings for documents
     embeddings = []
     for doc in docs:
-        # Try to get stored embedding if available
         if hasattr(doc, 'embedding') and doc.embedding is not None:
             embeddings.append(doc.embedding)
-        # Otherwise, compute it
         else:
             content = doc.page_content
-            # Use the retriever's embedding model
             emb = retriever.embeddings.embed_query(content)
             embeddings.append(emb)
     
@@ -61,11 +56,9 @@ def get_document_embeddings(retriever, query: str, method: str, k: int = TOP_K) 
 
 def get_hybrid_documents(retriever, reranker, query: str, k: int = TOP_K) -> Tuple[List[Document], List[np.ndarray], List[float]]:
     """Get hybrid retrieval documents and their embeddings."""
-    # Get candidates from both retrievers
     bm25_candidates = retriever.retrieve(query, method='bm25')[:FUSION_K]
     vector_candidates = retriever.retrieve(query, method='vector')[:FUSION_K]
     
-    # Merge & dedupe candidates
     unique = {}
     for doc in bm25_candidates + vector_candidates:
         # Use content hash as key for deduplication
@@ -74,7 +67,6 @@ def get_hybrid_documents(retriever, reranker, query: str, k: int = TOP_K) -> Tup
     
     candidates = list(unique.values())
     
-    # Get embeddings
     embeddings = []
     for doc in candidates:
         if hasattr(doc, 'embedding') and doc.embedding is not None:
@@ -98,13 +90,13 @@ def get_hybrid_documents(retriever, reranker, query: str, k: int = TOP_K) -> Tup
 
 def reduce_dimensions(embeddings: List[np.ndarray], method: str = 'tsne', n_components: int = 2):
     """Reduce dimensionality of embeddings for visualization."""
-    # Convert to numpy array if not already
+
     if isinstance(embeddings[0], list) or isinstance(embeddings[0], np.ndarray):
         X = np.array(embeddings)
     else:
         X = np.array([np.array(emb) for emb in embeddings])
     
-    # Apply dimensionality reduction
+
     if method.lower() == 'tsne':
         reducer = TSNE(n_components=n_components, perplexity=min(30, len(X)-1), random_state=42)
     elif method.lower() == 'pca':
@@ -114,7 +106,7 @@ def reduce_dimensions(embeddings: List[np.ndarray], method: str = 'tsne', n_comp
     else:
         raise ValueError(f"Unknown reduction method: {method}")
     
-    # Fit and transform
+  
     reduced = reducer.fit_transform(X)
     return reduced
 
@@ -129,40 +121,38 @@ def plot_embeddings(query_embeddings, bm25_embeddings_list, vector_embeddings_li
         axes = [axes]
     
     for i, ax in enumerate(axes):
-        # Collect all embeddings for this query
+
         all_embeddings = [query_embeddings[i]] + bm25_embeddings_list[i] + vector_embeddings_list[i] + hybrid_embeddings_list[i]
         
-        # Reduce dimensions
+
         reduced = reduce_dimensions(all_embeddings, method=reduction)
         
-        # ---- Zoom out by extending the axis limits ----
-        # Compute current data range
+
         x_min, x_max = reduced[:, 0].min(), reduced[:, 0].max()
         y_min, y_max = reduced[:, 1].min(), reduced[:, 1].max()
         
-        # Calculate center point
+
         x_center = (x_min + x_max) / 2
         y_center = (y_min + y_max) / 2
         
-        # Calculate current range
+
         x_range = x_max - x_min
         y_range = y_max - y_min
         
-        # Set zoom factor (higher = more zoomed out)
+
         zoom_factor = 3
         
-        # Calculate new limits
+
         x_new_min = x_center - zoom_factor * x_range / 2
         x_new_max = x_center + zoom_factor * x_range / 2
         y_new_min = y_center - zoom_factor * y_range / 2
         y_new_max = y_center + zoom_factor * y_range / 2
         
-        # Set new limits
+
         ax.set_xlim(x_new_min, x_new_max)
         ax.set_ylim(y_new_min, y_new_max)
-        # ---- End of zoom out adjustments ----
         
-        # Determine start indices for each method's embeddings
+
         bm25_start = 1
         bm25_end = bm25_start + len(bm25_embeddings_list[i])
         vector_start = bm25_end
@@ -170,16 +160,13 @@ def plot_embeddings(query_embeddings, bm25_embeddings_list, vector_embeddings_li
         hybrid_start = vector_end
         hybrid_end = hybrid_start + len(hybrid_embeddings_list[i])
         
-        # Plot query point (make it larger and more visible)
         ax.scatter(reduced[0, 0], reduced[0, 1], c='purple', marker='*', s=300, 
                   label='Query', zorder=10, edgecolors='black', linewidths=1)
         
-        # Plot BM25 results (larger points, no text)
         ax.scatter(reduced[bm25_start:bm25_end, 0], reduced[bm25_start:bm25_end, 1], 
                   c='blue', marker='o', s=100, label='BM25', alpha=0.7, 
                   edgecolors='black', linewidths=0.5)
         
-        # Plot Vector results (larger points, no text)
         ax.scatter(reduced[vector_start:vector_end, 0], reduced[vector_start:vector_end, 1], 
                   c='green', marker='s', s=100, label='Vector', alpha=0.7,
                   edgecolors='black', linewidths=0.5)
@@ -252,7 +239,6 @@ def visualize_embeddings(reduction_method='tsne'):
     fig = plot_embeddings(query_embeddings, bm25_embeddings_list, vector_embeddings_list, 
                         hybrid_embeddings_list, hybrid_scores_list, queries, reduction=reduction_method)
     
-    # Save and show
     fig.savefig(f'embedding_visualization_{reduction_method}_clean.png', dpi=300, bbox_inches='tight')
     print(f"Visualization saved as embedding_visualization_{reduction_method}_clean.png")
     

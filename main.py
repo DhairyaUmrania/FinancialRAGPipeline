@@ -1,4 +1,4 @@
-# Main script to run the RAG system with both improvements
+##This code is the intellectual property of Dhairya Umrania, Naman Deep and Devaansh Kataria.
 
 import torch
 from typing import Dict, Any, List
@@ -10,7 +10,6 @@ import os
 # Load variables from .env file into environment
 load_dotenv()
 
-# Import components
 from ingestion import ingest_documents
 from retriever import Retriever
 from llm_model import LLModel
@@ -20,7 +19,7 @@ from finetuned_llm import FinetunedLLModel
 # Load environment variables
 DEVICE = os.getenv('DEVICE', 'cpu')
 TOP_K = int(os.getenv('TOP_K', '5'))
-FUSION_K = int(os.getenv('FUSION_K', '10'))  # Number of candidates from each retriever
+FUSION_K = int(os.getenv('FUSION_K', '10')) 
 FINETUNED_MODEL_NAME = os.getenv('FINETUNED_MODEL_NAME', './Finetuned_model')
 
 def run_rag_system():
@@ -29,7 +28,6 @@ def run_rag_system():
     1. Hybrid retrieval with reranking
     2. Finetuned model with hybrid retrieval
     """
-    # Check for GPU
     if torch.cuda.is_available():
         print(f"GPU detected: {torch.cuda.get_device_name(0)}")
     else:
@@ -120,8 +118,7 @@ def run_rag_system():
             top_docs = [doc for doc, score in ranked[:TOP_K]]
             
             # Since we can't easily create a new retriever with the reranked docs,
-            # we'll use the original vector retriever but note that ideally
-            # we would use the reranked documents
+            # we'll use the original vector retriever for the hybrid approach.
             hybrid_retriever = vector_retriever
             
             # Generate answer using the base LLM
@@ -154,5 +151,4 @@ def run_rag_system():
 
 
 if __name__ == "__main__":
-    # Run the RAG system
     run_rag_system()

@@ -1,3 +1,5 @@
+##This code is the intellectual property of Dhairya Umrania, Naman Deep and Devaansh Kataria.
+
 import os
 from typing import Any, Dict, List
 
@@ -9,7 +11,6 @@ from langchain.chains import RetrievalQA
 from langchain.prompts import PromptTemplate
 from langchain.schema import Document
 
-# Constants (ensure these are defined or imported in your environment)
 LLM_MODEL_NAME = os.environ.get("LLM_MODEL_NAME", "google/flan-t5-small")
 TOP_K = int(os.environ.get("TOP_K", 4))
 

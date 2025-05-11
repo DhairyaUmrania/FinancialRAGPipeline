@@ -1,4 +1,4 @@
-# retriever.py
+##This code is the intellectual property of Dhairya Umrania, Naman Deep and Devaansh Kataria.
 
 import os
 from typing import List
@@ -9,7 +9,6 @@ from langchain.embeddings import HuggingFaceEmbeddings
 from langchain.retrievers import BM25Retriever
 from langchain_pinecone import PineconeVectorStore
 
-# Configuration (or import from config.py)
 PINECONE_API_KEY       = os.environ["PINECONE_API_KEY"]
 PINECONE_ENVIRONMENT   = os.environ["PINECONE_ENVIRONMENT"]
 PINECONE_INDEX_NAME    = os.environ.get("PINECONE_INDEX_NAME", "my-index")
@@ -31,7 +30,7 @@ class Retriever:
         if documents:
             self.bm25_retriever = BM25Retriever.from_documents(documents)
             self.bm25_retriever.k = TOP_K
-            print(f"✅ BM25 initialized on {len(documents)} docs")
+            print(f"BM25 initialized on {len(documents)} docs")
 
         # 3) pinecone client/wrapper
         self.pinecone = Pinecone(api_key=PINECONE_API_KEY, environment=PINECONE_ENVIRONMENT)
@@ -39,7 +38,7 @@ class Retriever:
         # 4) check or create index
         needs_ingest = False
         if not self.pinecone.has_index(PINECONE_INDEX_NAME):
-            print(f"ℹ️  Index '{PINECONE_INDEX_NAME}' not found → creating")
+            print(f"Index '{PINECONE_INDEX_NAME}' not found → creating")
             dim = self.embeddings.client.get_sentence_embedding_dimension()
             self.pinecone.create_index(
                 name=PINECONE_INDEX_NAME,
@@ -54,10 +53,10 @@ class Retriever:
             stats = idx.describe_index_stats()
             total = sum(ns["vector_count"] for ns in stats["namespaces"].values())
             if total == 0:
-                print(f"ℹ️  Index '{PINECONE_INDEX_NAME}' is empty → will ingest")
+                print(f"Index '{PINECONE_INDEX_NAME}' is empty → will ingest")
                 needs_ingest = True
             else:
-                print(f"✅ Connected to non-empty index '{PINECONE_INDEX_NAME}' ({total} vectors)")
+                print(f"Connected to non-empty index '{PINECONE_INDEX_NAME}' ({total} vectors)")
 
         # 5) connect vector store
         idx = self.pinecone.Index(PINECONE_INDEX_NAME)
@@ -74,7 +73,7 @@ class Retriever:
             for i in range(0, len(documents), batch_size):
                 batch = documents[i : i + batch_size]
                 self.vector_store.add_documents(batch)
-            print(f"🚀 Ingested {len(documents)} documents into Pinecone")
+            print(f"Ingested {len(documents)} documents into Pinecone")
 
     def get_retriever(self, method: str):
         method = method.lower()
@@ -91,17 +90,3 @@ class Retriever:
         return retr.get_relevant_documents(query)
 
 
-# if __name__ == "__main__":
-#     # from ingestion import ingest_documents
-
-#     print("▶️  First-time ingestion…")
-#     docs = ingest_documents()
-#     retr = Retriever(documents=docs)
-
-#     q = "summarise the lending activities of The First of Long Island Corporation?"
-#     for m in ("bm25", "vector"):
-#         print(f"\n--- {m.upper()} results ---")
-#         hits = retr.retrieve(q, method=m)
-#         # for i, d in enumerate(hits, 1):
-#         #     print(f"{i}. {d.page_content[:]}")
-#         print(hits)

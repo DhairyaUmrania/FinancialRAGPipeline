@@ -1,3 +1,5 @@
+##This code is the intellectual property of Dhairya Umrania, Naman Deep and Devaansh Kataria.
+
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -12,7 +14,6 @@ import numpy as np
 import matplotlib.pyplot as plt
 import time
 
-# Set random seeds for reproducibility
 def set_seed(seed):
     random.seed(seed)
     np.random.seed(seed)
@@ -34,8 +35,8 @@ epochs = 5  # Maximum number of epochs
 max_length = 512
 
 # Early stopping parameters
-patience = 2  # Stop if validation loss doesn't improve for this many epochs
-early_stopping_threshold = 0.01  # Minimum improvement to count as progress
+patience = 2  
+early_stopping_threshold = 0.01 
 
 # Load the dataset
 print("Loading dataset...")
@@ -59,19 +60,17 @@ print(f"Validation set: {len(val_dataset)} examples")
 tokenizer = AutoTokenizer.from_pretrained(model_name)
 model = AutoModelForSeq2SeqLM.from_pretrained(model_name)
 
-# Make sure pad token is set
+# pad token
 if tokenizer.pad_token is None:
     tokenizer.pad_token = tokenizer.eos_token
 
 model.to(device)
 
-# Format inputs appropriately for Flan-T5
 def preprocess_function(examples):
     """Process the dataset for Flan-T5."""
     inputs = []
     targets = []
     
-    # Flan-T5 is already instruction-tuned, so we can use a more natural format
     for i in range(len(examples['Context'])):
         context = examples['Context'][i]
         question = examples['Question'][i]
@@ -156,8 +155,8 @@ scheduler = get_scheduler(
 # Initialize lists to store loss values for plotting
 train_losses = []
 val_losses = []
-step_losses = []  # For tracking loss at each step
-lr_values = []    # For tracking learning rate changes
+step_losses = []  
+lr_values = []    
 
 # Function to plot losses
 def plot_losses(train_losses, val_losses, step_losses=None, lr_values=None):

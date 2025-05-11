@@ -1,10 +1,11 @@
+##This code is the intellectual property of Dhairya Umrania, Naman Deep and Devaansh Kataria.
+
 import os
 import torch
 from typing import List
 from transformers import AutoTokenizer, AutoModelForSequenceClassification
 from langchain.schema import Document
 
-# Configuration via environment variables
 DEVICE = os.environ.get("DEVICE", "cuda" if torch.cuda.is_available() else "cpu")
 RERANKER_MODEL_NAME = os.environ.get("RERANKER_MODEL_NAME", "cross-encoder/stsb-roberta-base")
 
