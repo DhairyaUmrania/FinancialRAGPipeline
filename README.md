@@ -1,4 +1,4 @@
-# Financial RAG System
+# Financial RAG Pipeline
 
 A Retrieval-Augmented Generation (RAG) system focused on financial information with advanced retrieval methods and fine-tuned language models.
 
@@ -59,8 +59,8 @@ The system follows a modular architecture with the following flow:
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/DhairyaUmrania/FinancialRAGPipeline/.git
-cd financial-rag-system
+git clone https://github.com/DhairyaUmrania/FinancialRAGPipeline.git
+cd FinancialRAGPipeline
 ```
 
 2. Install dependencies:
@@ -163,3 +163,7 @@ Dimensionality reduction methods include:
 ## Authors
 
 This code is the intellectual property of Dhairya Umrania, Naman Deep, and Devaansh Kataria.
+
+## Repository
+
+Official repository: [https://github.com/DhairyaUmrania/FinancialRAGPipeline/](https://github.com/DhairyaUmrania/FinancialRAGPipeline/)
